@@ -1,8 +1,9 @@
 from sqlalchemy import create_engine, select, insert, func
 from sqlalchemy.orm import sessionmaker
-from sqlite3 import PARSE_DECLTYPES, PARSE_COLNAMES
 
 from .models import Base, Auction, Bid
+
+from config import Config
 
 from typing import Optional
 
@@ -15,7 +16,12 @@ class DB:
         return cls._instance
 
     def __init__(self):
-        self.engine = create_engine(f"sqlite:///auction.db", connect_args={'detect_types': PARSE_DECLTYPES|PARSE_COLNAMES}, native_datetime=True)
+        username = Config["MySQL"]["Username"]
+        password = Config["MySQL"]["Password"]
+        db_host = Config["MySQL"]["Host"]
+        db_name = Config["MySQL"]["DBName"]
+
+        self.engine = create_engine(f"mysql+pymysql://{username}:{password}@{db_host}/{db_name}")
         self.session = sessionmaker(self.engine, autoflush=True, autocommit=True)
 
         Base.metadata.create_all(self.engine)
