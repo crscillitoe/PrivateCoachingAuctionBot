@@ -1,5 +1,7 @@
-from sqlalchemy import create_engine, select, insert, func
+from sqlalchemy import create_engine, select, insert, update, func
 from sqlalchemy.orm import sessionmaker
+
+from datetime import datetime
 
 from .models import Base, Auction, Bid
 
@@ -64,5 +66,14 @@ class DB:
                     user_id=user_id,
                     amount=amount
                 )
+            )
+
+    def revoke_bid(self, bid_id: int) -> None:
+        with self.session() as sess:
+            sess.execute(
+                update(Bid)
+                .where(Bid.id == bid_id)
+                .values(revoked=True, revoked_at=datetime.now())
+                .execution_options(synchronize_session="fetch")
             )
 

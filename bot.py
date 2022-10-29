@@ -18,11 +18,11 @@ class ConfirmationView(View):
 
         self.bid_amount = bid_amount
 
-        self.yes_button = Button(label='Yes', style=ButtonStyle.green, custom_id='confirmation:yes')
+        self.yes_button = Button(label='Yes', style=ButtonStyle.green)
         self.yes_button.callback = self.yes
         self.add_item(self.yes_button)
 
-        self.no_button = Button(label='No', style=ButtonStyle.red, custom_id='confirmation:no')
+        self.no_button = Button(label='No', style=ButtonStyle.red)
         self.no_button.callback = self.no
         self.add_item(self.no_button)
 
@@ -49,6 +49,40 @@ class ConfirmationView(View):
         self.no_button.disabled = True
 
         await interaction.message.edit(view=self)
+
+
+class RevokeBidView(View):
+    def __init__(self):
+        super().__init__()
+
+        self.revoke_button = Button(label='Revoke Bid', style=ButtonStyle.red)
+        self.revoke_button.callback = self.revoke_bid
+        self.add_item(self.revoke_button)
+
+    async def revoke_bid(self, interaction: Interaction):
+        self.revoke_button.disabled = True
+        await interaction.message.edit(view=self)
+
+        await interaction.response.defer(thinking=True)
+
+        auction = DB().get_current_auction()
+        if auction is None:
+            await interaction.followup.send("There is no auction happening right now.")
+            return
+
+        bid = DB().get_bid(auction_id=auction.id, user_id=interaction.user.id)
+        if bid is None:
+            await interaction.followup.send("You do not have a bid in this auction?! Please reach out to Joel#0006, something is broken.")
+            return
+
+        if bid.revoked:
+            await interaction.followup.send("You have already revoked this bid.")
+            return
+
+        DB().revoke_bid(bid_id=bid.id)
+
+        await interaction.followup.send("Your bid has been revoked. You will not be able to place another bid in this auction.")
+
 
 
 intents = Intents.default()
@@ -80,12 +114,19 @@ async def bid(interaction: Interaction, amount: int):
 
     current_bid = DB().get_bid(auction_id=auction.id, user_id=interaction.user.id)
     if current_bid is not None:
+        if current_bid.revoked:
+            await interaction.response.send_message("Your bid for this auction was revoked. You cannot place a new bid in this auction.")
+            return
+
         await interaction.response.send_message(f"""
 You have already placed a bid in this auction for **${current_bid.amount:,.2f}**.
 
-This cannot be revoked or undone.
+Bidding will end <t:{end_date_ts}:D>.
 
-Bidding will end <t:{end_date_ts}:D>.""")
+You can revoke your bid with the button below.
+
+**NOTE: Once you revoke your bid, you cannot place a new bid in this auction.**
+""", view=RevokeBidView())
         return
 
     confirmation_message = f"""

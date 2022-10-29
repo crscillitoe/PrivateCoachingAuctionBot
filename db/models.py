@@ -24,8 +24,10 @@ class Bid(Base):
     user_id = Column(BigInteger, default=0)
     amount = Column(Integer, default=0)
     placed_at = Column(DateTime, default=func.now())
+    revoked = Column(Boolean, default=False)
+    revoked_at = Column(DateTime, default=None)
 
     auction = relationship("Auction", back_populates="bids")
 
     def __repr__(self):
-        return f"Bid(id={self.id!r}, auction_id={self.auction_id!r}, user_id={self.user_id!r}, amount={self.amount!r})"
+        return f"Bid(id={self.id!r}, auction_id={self.auction_id!r}, user_id={self.user_id!r}, amount={self.amount!r}, placed_at={self.placed_at!r}, revoked={self.revoked!r}, revoked_at={self.revoked_at!r})"
